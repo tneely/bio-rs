@@ -42,6 +42,7 @@ fn main() {
         let now = Instant::now();
         match aoc {
             1 => aoc::day1::run("./data/aoc/day1/input.txt").expect("Day 1 failed!"),
+            2 => aoc::day2::run("./data/aoc/day2/input.txt").expect("Day 2 failed!"),
             _ => panic!("This day hasn't been completed!")
         }
         println!("Day '{}' completed in '{}' seconds", aoc, now.elapsed().as_secs());
