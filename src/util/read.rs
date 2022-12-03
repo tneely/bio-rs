@@ -1,0 +1,16 @@
+use std::io::{self, BufRead};
+use std::fs::{self, File};
+use std::path::Path;
+
+pub fn file(file_path: &str) -> String {
+    return fs::read_to_string(file_path)
+        .expect( &format!("Unable to read file '{}'", file_path));
+}
+
+// The output is wrapped in a Result to allow matching on errors
+// Returns an Iterator to the Reader of the lines of the file.
+pub fn lines<P>(file_path: P) -> io::Result<io::Lines<io::BufReader<File>>>
+    where P: AsRef<Path>, {
+    let file = File::open(file_path)?;
+    Ok(io::BufReader::new(file).lines())
+}
