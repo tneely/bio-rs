@@ -43,6 +43,7 @@ fn main() {
         match aoc {
             1 => aoc::day1::run("./data/aoc/day1/input.txt").expect("Day 1 failed!"),
             2 => aoc::day2::run("./data/aoc/day2/input.txt").expect("Day 2 failed!"),
+            3 => aoc::day3::run("./data/aoc/day3/input.txt").expect("Day 3 failed!"),
             _ => panic!("This day hasn't been completed!")
         }
         println!("Day '{}' completed in '{}' seconds", aoc, now.elapsed().as_secs());
