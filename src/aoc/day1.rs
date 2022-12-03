@@ -43,9 +43,24 @@ This list represents the Calories of the food carried by five Elves:
     The fourth Elf is carrying food with 7000, 8000, and 9000 Calories, a total of 24000 Calories.
     The fifth Elf is carrying one food item with 10000 Calories.
 
-In case the Elves get hungry and need extra snacks, they need to know which Elf to ask: they'd like to know how many Calories are being carried by the Elf carrying the most Calories. In the example above, this is 24000 (carried by the fourth Elf).
+In case the Elves get hungry and need extra snacks, they need to know which Elf to ask: they'd like
+to know how many Calories are being carried by the Elf carrying the most Calories.
+In the example above, this is 24000 (carried by the fourth Elf).
 
 Find the Elf carrying the most Calories. How many total Calories is that Elf carrying?
+
+--- Part Two ---
+
+By the time you calculate the answer to the Elves' question, they've already realized that the Elf carrying
+the most Calories of food might eventually run out of snacks.
+
+To avoid this unacceptable situation, the Elves would instead like to know the total Calories carried by the
+top three Elves carrying the most Calories. That way, even if one of those Elves runs out of snacks, they still have two backups.
+
+In the example above, the top three Elves are the fourth Elf (with 24000 Calories), then the third Elf (with 11000 Calories),
+ then the fifth Elf (with 10000 Calories). The sum of the Calories carried by these three elves is 45000.
+
+Find the top three Elves carrying the most Calories. How many Calories are those Elves carrying in total?
 
 https://adventofcode.com/2022/day/1
  */
@@ -56,25 +71,31 @@ use crate::util::read;
 
 pub fn run(file_name: &str) -> Result<(), Box<dyn Error>> {
     let lines = read::lines(file_name)?;
-    let mut max_cal_count = 0;
-    let mut thickest_elf = 0;
     let mut current_cal_count = 0;
-    let mut current_elf = 1;
+    let mut cals_per_elf: Vec<i32> = Vec::new();
     for line in lines {
         if let Ok(ip) = line {
             if ip.is_empty() {
+                cals_per_elf.push(current_cal_count);
                 current_cal_count = 0;
-                current_elf += 1;
                 continue;
             }
             let cals = ip.parse::<i32>()?;
             current_cal_count += cals;
-            if current_cal_count > max_cal_count {
-                max_cal_count = current_cal_count;
-                thickest_elf = current_elf;
-            }
         }
     }
-    println!("The elf carrying the most Calories is elf '{}' with '{}' Calories in total!", thickest_elf, max_cal_count);
+    cals_per_elf.push(current_cal_count);
+
+    let mut thickest_elves = (0..cals_per_elf.len()).collect::<Vec<_>>();
+    thickest_elves.sort_by_key(|&i| -&cals_per_elf[i]);
+
+    println!("The top 3 elves with the most calories are:");
+    let mut cal_sum = 0;
+    for i in 0..3 {
+        let elf_cals = cals_per_elf[thickest_elves[i]];
+        cal_sum += elf_cals;
+        println!("\tElf '{}' with '{}' Calories in total!", thickest_elves[i] + 1, elf_cals);
+    }
+    println!("For a total of '{}' Calories!", cal_sum);
     Ok(())
 }
