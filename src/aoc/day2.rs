@@ -39,6 +39,23 @@ In this example, if you were to follow the strategy guide, you would get a total
 
 What would your total score be if everything goes exactly according to your strategy guide?
 
+--- Part Two ---
+
+The Elf finishes helping with the tent and sneaks back over to you.
+"Anyway, the second column says how the round needs to end: X means you need to lose,
+Y means you need to end the round in a draw, and Z means you need to win. Good luck!"
+
+The total score is still calculated in the same way, but now you need to figure out what shape to choose so the round ends as indicated.
+The example above now goes like this:
+
+    In the first round, your opponent will choose Rock (A), and you need the round to end in a draw (Y), so you also choose Rock. This gives you a score of 1 + 3 = 4.
+    In the second round, your opponent will choose Paper (B), and you choose Rock so you lose (X) with a score of 1 + 0 = 1.
+    In the third round, you will defeat your opponent's Scissors with Rock for a score of 1 + 6 = 7.
+
+Now that you're correctly decrypting the ultra top secret strategy guide, you would get a total score of 12.
+
+Following the Elf's instructions for the second column, what would your total score be if everything goes exactly according to your strategy guide?
+
 https://adventofcode.com/2022/day/2
  */
 
@@ -54,6 +71,10 @@ const SELF_ROCK: &str = "X";
 const SELF_PAPER: &str = "Y";
 const SELF_SCISSORS: &str = "Z";
 
+const LOSE: &str = "X";
+const DRAW: &str = "Y";
+const WIN: &str = "Z";
+
 #[derive(Clone, Copy, PartialEq)]
 enum Move {
     Rock,
@@ -63,34 +84,56 @@ enum Move {
 
 pub fn run(file_name: &str) -> Result<(), Box<dyn Error>> {
     let lines = read::lines(file_name)?;
-    let mut score = 0;
+    let mut part1_score = 0;
+    let mut part2_score = 0;
     for line in lines {
         if let Ok(ip) = line {
             let mut moves = ip.split(" ");
             let elf_move = translate_elf_move(moves.next().unwrap());
-            let self_move = translate_self_move(moves.next().unwrap());
-            score += calc_score(elf_move, self_move);
+            let self_move_code = moves.next().unwrap();
+            let self_move1 = translate_self_move(self_move_code);
+            let self_move2 = translate_self_move2(elf_move, self_move_code);
+            part1_score += calc_score(elf_move, self_move1);
+            part2_score += calc_score(elf_move, self_move2);
         }
     }
-    println!("Got a score of '{}'", score);
+    println!("Got a score of '{}' for part 1", part1_score);
+    println!("Got a score of '{}' for part 2", part2_score);
     Ok(())
 }
 
-fn translate_elf_move(elf_move: &str) -> Move {
-    match elf_move {
+fn translate_elf_move(elf_move_code: &str) -> Move {
+    match elf_move_code {
         ELF_ROCK=>Move::Rock,
         ELF_PAPER=>Move::Paper,
         ELF_SCISSORS=>Move::Scissors,
-        _=>panic!("'{}' is not a legal elf move!", elf_move)
+        _=>panic!("'{}' is not a legal elf move!", elf_move_code)
     }
 }
 
-fn translate_self_move(self_move: &str) -> Move {
-    match self_move {
+fn translate_self_move(self_move_code: &str) -> Move {
+    match self_move_code {
         SELF_ROCK=>Move::Rock,
         SELF_PAPER=>Move::Paper,
         SELF_SCISSORS=>Move::Scissors,
-        _=>panic!("'{}' is not a legal self move!", self_move)
+        _=>panic!("'{}' is not a legal self move!", self_move_code)
+    }
+}
+
+fn translate_self_move2(elf_move: Move, self_move_code: &str) -> Move {
+    match self_move_code {
+        LOSE=> match elf_move {
+            Move::Rock=>Move::Scissors,
+            Move::Paper=>Move::Rock,
+            Move::Scissors=>Move::Paper,
+        },
+        DRAW=> elf_move,
+        WIN=> match elf_move {
+            Move::Rock=>Move::Paper,
+            Move::Paper=>Move::Scissors,
+            Move::Scissors=>Move::Rock,
+        },
+        _=>panic!("'{}' is not a legal self move!", self_move_code)
     }
 }
 
