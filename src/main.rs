@@ -50,11 +50,7 @@ fn main() {
             3 => aoc::day3::run("./data/aoc/day3/input.txt").expect("Day 3 failed!"),
             _ => panic!("This day hasn't been completed!"),
         }
-        println!(
-            "Day '{}' completed in '{}' seconds",
-            aoc,
-            now.elapsed().as_secs()
-        );
+        println!("Day '{}' completed in '{:#?}'", aoc, now.elapsed());
     } else {
         panic!("How'd you get here?!")
     }
