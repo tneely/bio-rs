@@ -85,31 +85,53 @@ use crate::util::read;
 const ALPHABET: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 pub fn run(file_name: &str) -> Result<(), Box<dyn Error>> {
-
     let lines = read::lines(file_name)?;
-    let mut priorty_sum = 0;
+    let mut i = 0;
+    let mut priority_sum = 0;
+    let mut group_sum = 0;
+    let mut group_common: Vec<char> = Vec::new();
+
     for line in lines {
         if let Ok(ip) = line {
-            let middle = ip.len() / 2;
-            let first = &ip[..middle];
-            let second = &ip[middle..];
-            if let Some(common) = find_common_letter(first, second) {
-                priorty_sum += get_letter_score(common)
+            priority_sum += get_pack_score(&ip);
+
+            if i % 3 == 0 {
+                if group_common.len() > 0 {
+                    group_sum += get_letter_score(group_common[0]);
+                }
+                group_common = ip.chars().collect();
+            } else {
+                let common: String = group_common.into_iter().collect();
+                group_common = find_common_letters(&ip, &common);
             }
+
+            i += 1
         }
     }
-    println!("Got a priority sum of '{}'", priorty_sum);
+    group_sum += get_letter_score(group_common[0]);
+
+    println!("Got a priority sum of '{}'", priority_sum);
+    println!("Got a group sum of '{}'", group_sum);
     Ok(())
 }
 
-fn find_common_letter(first: &str, second: &str) -> Option<char> {
-    let mut letters: HashSet<_> = first.chars().collect();
+fn get_pack_score(pack: &str) -> usize {
+    let middle = pack.len() / 2;
+    let first = &pack[..middle];
+    let second = &pack[middle..];
+    let common = find_common_letters(first, second)[0];
+    return get_letter_score(common);
+}
+
+fn find_common_letters(first: &str, second: &str) -> Vec<char> {
+    let letters: HashSet<_> = first.chars().collect();
+    let mut common = Vec::new();
     for c in second.chars() {
         if letters.contains(&c) {
-            return Some(c)
+            common.push(c);
         }
     }
-    return None;
+    return common;
 }
 
 fn get_letter_score(letter: char) -> usize {
