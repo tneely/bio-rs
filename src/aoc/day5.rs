@@ -151,7 +151,7 @@ pub fn run(file_name: &str) -> Result<(), Box<dyn Error>> {
             } else if loading_phase {
                 load_crates(ip, &mut stacks);
             } else {
-                move_crates(ip, &mut stacks);
+                move_crates_2(ip, &mut stacks);
             }
         }
     }
@@ -194,4 +194,16 @@ fn move_crates(line: String, stacks: &mut Vec<Vec<String>>) {
         let moved_crate = stacks[start_stack].pop().unwrap();
         stacks[end_stack].push(moved_crate);
     }
+}
+
+fn move_crates_2(line: String, stacks: &mut Vec<Vec<String>>) {
+    let action_regex = Regex::new(ACTION_REGEX_PATTERN).unwrap();
+    let caps = action_regex.captures(&line).unwrap();
+    let n = caps.get(1).unwrap().as_str().parse::<usize>().unwrap();
+    let start_stack = caps.get(2).unwrap().as_str().parse::<usize>().unwrap() - 1;
+    let end_stack = caps.get(3).unwrap().as_str().parse::<usize>().unwrap() - 1;
+
+    let end_i = stacks[start_stack].len() - n;
+    let moved_crates = stacks[start_stack].split_off(end_i);
+    stacks[end_stack].extend(moved_crates);
 }
