@@ -51,6 +51,7 @@ fn main() {
             4 => aoc::day4::run("./data/aoc/day4/input.txt").expect("Day 4 failed!"),
             5 => aoc::day5::run("./data/aoc/day5/input.txt").expect("Day 5 failed!"),
             6 => aoc::day6::run("./data/aoc/day6/input.txt").expect("Day 6 failed!"),
+            7 => aoc::day7::run("./data/aoc/day7/input.txt").expect("Day 7 failed!"),
             _ => panic!("This day hasn't been completed!"),
         }
         println!("Day '{}' completed in '{:#?}'", aoc, now.elapsed());
