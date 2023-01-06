@@ -184,6 +184,7 @@ fn load_crates(line: String, stacks: &mut Vec<Vec<String>>) {
     }
 }
 
+#[allow(dead_code)]
 fn move_crates(line: String, stacks: &mut Vec<Vec<String>>) {
     let action_regex = Regex::new(ACTION_REGEX_PATTERN).unwrap();
     let caps = action_regex.captures(&line).unwrap();

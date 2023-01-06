@@ -33,7 +33,8 @@ fn main() {
         println!("Running homework assignment '{}':", hw);
         let now = Instant::now();
         match hw {
-            0 => hw::hw0::run("./data/hw/hw0/test.fna").expect("Homework 0 failed!"),
+            1 => hw::hw1::run("./data/hw/hw1/CP001872.fna", "./data/hw/hw1/CP003913.fna")
+                .expect("Homework 1 should pass!"),
             _ => panic!("This assignment hasn't been completed!"),
         }
         println!(
@@ -52,6 +53,7 @@ fn main() {
             5 => aoc::day5::run("./data/aoc/day5/input.txt").expect("Day 5 failed!"),
             6 => aoc::day6::run("./data/aoc/day6/input.txt").expect("Day 6 failed!"),
             7 => aoc::day7::run("./data/aoc/day7/input.txt").expect("Day 7 failed!"),
+            8 => aoc::day8::run("./data/aoc/day8/example.txt").expect("Day 8 failed!"),
             _ => panic!("This day hasn't been completed!"),
         }
         println!("Day '{}' completed in '{:#?}'", aoc, now.elapsed());
