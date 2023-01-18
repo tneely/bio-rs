@@ -29,11 +29,6 @@ impl<'a> SuffixPointer<'a> {
     }
 }
 
-#[allow(dead_code)]
-fn main() {
-    run("./data/hw/hw1/CP001872.fna", "./data/hw/hw1/CP003913.fna").expect("Homework should pass");
-}
-
 pub fn run(file_path1: &str, file_path2: &str) -> Result<(), Error> {
     let file_name1 = file_name_from_path(file_path1);
     println!("Fasta 1: {}", file_name1);

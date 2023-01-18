@@ -33,15 +33,11 @@ fn main() {
         println!("Running homework assignment '{}':", hw);
         let now = Instant::now();
         match hw {
-            1 => hw::hw1::run("./data/hw/hw1/CP001872.fna", "./data/hw/hw1/CP003913.fna")
-                .expect("Homework 1 should pass!"),
+            1 => hw::hw1::run("./data/hw/hw1/CP001872.fna", "./data/hw/hw1/CP003913.fna").expect("Homework 1 should pass!"),
+            2 => hw::hw2::run("./data/hw/hw1/CP003913.fna").expect("Homework 2 should pass!"),
             _ => panic!("This assignment hasn't been completed!"),
         }
-        println!(
-            "Homework '{}' completed in '{}' seconds",
-            hw,
-            now.elapsed().as_secs()
-        );
+        println!("Homework '{}' completed in '{}' seconds", hw, now.elapsed().as_secs());
     } else if let Some(aoc) = args.aoc {
         println!("Running advent of code day '{}':", aoc);
         let now = Instant::now();
