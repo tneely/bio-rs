@@ -1,6 +1,6 @@
 use gb_io::feature_kind;
 use gb_io::reader::SeqReader;
-use gb_io::seq::Location;
+use gb_io::seq::{After, Before, Location};
 use itertools::Itertools;
 use std::cmp::{max, min};
 use std::collections::HashMap;
@@ -52,11 +52,7 @@ impl PositionalDistribution {
         let mut weights: HashMap<i64, HashMap<Base, f64>> = HashMap::new();
         freqs.iter().for_each(|(p, m)| {
             m.iter().for_each(|(b, p_site)| {
-                let weight = if *p_site == 0.0 {
-                    -99.00
-                } else {
-                    p_site.log2() - background.get_base_freq(*b).log2()
-                };
+                let weight = p_site.log2() - background.get_base_freq(*b).log2();
                 weights.entry(*p).or_default().insert(*b, weight);
             });
         });
@@ -79,7 +75,11 @@ impl PositionalDistribution {
     }
 
     fn get_pos_weight(&self, pos: i64, base: Base) -> f64 {
-        return *self.weights.get(&pos).unwrap_or(&HashMap::new()).get(&base).unwrap_or(&0.0);
+        return if base == Base::N {
+            0.0
+        } else {
+            *self.weights.get(&pos).unwrap_or(&HashMap::new()).get(&base).unwrap_or(&-99.0)
+        };
     }
 
     fn get_max_score(&self) -> f64 {
@@ -89,11 +89,18 @@ impl PositionalDistribution {
             .fold(0.0, |t, (_, m)| t + *m.iter().max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap()).unwrap().1);
     }
 
-    fn in_cds_range(&self, pos: i64) -> bool {
-        return self.cds_locs.iter().any(|l| {
-            let (start, end) = l.find_bounds().unwrap();
-            return start <= pos && pos <= end;
-        });
+    fn in_cds_range(&self, pos: i64, is_complement: bool) -> bool {
+        return self
+            .cds_locs
+            .iter()
+            .filter(|l| match l {
+                Location::Complement(_) => is_complement,
+                _ => !is_complement,
+            })
+            .any(|l| {
+                let (start, end) = l.find_bounds().unwrap();
+                return start <= pos && pos <= end;
+            });
     }
 
     fn print_pos_count(&self) {
@@ -208,7 +215,7 @@ fn count_positions(file_path: &str) -> Result<PositionalDistribution, Error> {
         seq.features
             .iter()
             .filter(|f| f.kind == feature_kind!("CDS"))
-            .map(|f| get_start_location(&f.location))
+            .filter_map(|f| get_start_location(&f.location))
             .for_each(|l| {
                 let mut p = -BASE_OFFSET;
                 for c in seq.extract_location(&l).unwrap() {
@@ -244,7 +251,7 @@ fn score_positions(file_path: &str, pos_dist: &PositionalDistribution) -> Result
             *all_score.entry(bin_score(score)).or_default() += 1;
             if score >= 10.0 {
                 let s = i as i64 + BASE_OFFSET + 1;
-                if !pos_dist.in_cds_range(s) {
+                if !pos_dist.in_cds_range(s, false) {
                     outliers.push((Location::single(s), score));
                 }
             }
@@ -258,8 +265,8 @@ fn score_positions(file_path: &str, pos_dist: &PositionalDistribution) -> Result
             }
             *all_score.entry(bin_score(score)).or_default() += 1;
             if score >= 10.0 {
-                let s = i as i64 + BASE_OFFSET + 1;
-                if !pos_dist.in_cds_range(s) {
+                let s = seq.seq.len() as i64 - i as i64 - BASE_OFFSET;
+                if !pos_dist.in_cds_range(s, true) {
                     outliers.push((Location::Complement(Box::from(Location::single(s))), score));
                 }
             }
@@ -301,14 +308,27 @@ fn bin_score(score: f64) -> isize {
     return min(max(-51, score.floor() as isize), 51);
 }
 
-fn get_start_location(l: &Location) -> Location {
-    return if let Location::Complement(lc) = l {
+fn get_start_location(l: &Location) -> Option<Location> {
+    if let Location::Complement(lc) = l {
         match lc.as_ref() {
-            Location::Range(_, (end, _)) => Location::Complement(Box::from(Location::simple_range(end - BASE_OFFSET - 1, end + BASE_OFFSET))),
+            Location::Range(_, (end, _)) => {
+                return if is_partial(lc) {
+                    None
+                } else {
+                    Some(Location::Complement(Box::from(Location::simple_range(
+                        end - BASE_OFFSET - 1,
+                        end + BASE_OFFSET,
+                    ))))
+                }
+            }
             Location::Join(ls) => {
                 let mut sls = Vec::new();
                 let mut rem = BASE_OFFSET;
                 for (i, li) in ls.iter().enumerate().rev() {
+                    if is_partial(li) {
+                        return None;
+                    };
+
                     let (s, e) = li.find_bounds().unwrap();
 
                     let end = if i == ls.len() - 1 { e + BASE_OFFSET } else { e };
@@ -322,17 +342,27 @@ fn get_start_location(l: &Location) -> Location {
                     }
                 }
                 sls.reverse();
-                Location::Complement(Box::from(Location::Join(sls)))
+                return Some(Location::Complement(Box::from(Location::Join(sls))));
             }
             _ => panic!("Don't know how to convert location '{}'", l),
         }
     } else {
         match l {
-            Location::Range((start, _), _) => Location::simple_range(start - BASE_OFFSET, start + BASE_OFFSET + 1),
+            Location::Range((start, _), _) => {
+                return if is_partial(l) {
+                    None
+                } else {
+                    Some(Location::simple_range(start - BASE_OFFSET, start + BASE_OFFSET + 1))
+                }
+            }
             Location::Join(ls) => {
                 let mut sls = Vec::new();
                 let mut rem = BASE_OFFSET;
                 for (i, li) in ls.iter().enumerate() {
+                    if is_partial(li) {
+                        return None;
+                    };
+
                     let (s, e) = li.find_bounds().unwrap();
 
                     let start = if i == 0 { s - BASE_OFFSET } else { s };
@@ -345,9 +375,16 @@ fn get_start_location(l: &Location) -> Location {
                         break;
                     }
                 }
-                Location::Join(sls)
+                return Some(Location::Join(sls));
             }
             _ => panic!("Don't know how to convert location '{}'", l),
         }
+    };
+}
+
+fn is_partial(l: &Location) -> bool {
+    return match *l {
+        Location::Range((_, Before(b)), (_, After(a))) => a || b,
+        _ => false,
     };
 }
