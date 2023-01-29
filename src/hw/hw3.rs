@@ -98,17 +98,17 @@ impl PositionalDistribution {
                 _ => !is_complement,
             })
             .any(|l| {
-                let (start, end) = l.find_bounds().unwrap();
-                return start <= pos && pos <= end;
+                let (start, _) = l.find_bounds().unwrap();
+                return start + BASE_OFFSET + 1 == pos;
             });
     }
 
     fn print_pos_count(&self) {
         println!("\nCount Matrix:");
         for (p, _) in self.counts.iter().sorted_by_key(|w| w.0) {
-            print!("{} ", p);
+            print!("{}", p);
             for b in [Base::A, Base::C, Base::G, Base::T] {
-                print!("{} ", self.get_pos_count(*p, b));
+                print!(" {}", self.get_pos_count(*p, b));
             }
             println!();
         }
@@ -117,9 +117,9 @@ impl PositionalDistribution {
     fn print_pos_freq(&self) {
         println!("\nFrequency Matrix:");
         for (p, _) in self.freqs.iter().sorted_by_key(|w| w.0) {
-            print!("{} ", p);
+            print!("{}", p);
             for b in [Base::A, Base::C, Base::G, Base::T] {
-                print!("{:.4} ", self.get_pos_freq(*p, b));
+                print!(" {:.4}", self.get_pos_freq(*p, b));
             }
             println!();
         }
@@ -128,9 +128,9 @@ impl PositionalDistribution {
     fn print_pos_weight(&self) {
         println!("\nWeight Matrix:");
         for (p, _) in self.weights.iter().sorted_by_key(|w| w.0) {
-            print!("{} ", p);
+            print!("{}", p);
             for b in [Base::A, Base::C, Base::G, Base::T] {
-                print!("{:.4} ", self.get_pos_weight(*p, b));
+                print!(" {:.4}", self.get_pos_weight(*p, b));
             }
             println!();
         }
