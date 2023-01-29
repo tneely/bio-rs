@@ -35,7 +35,7 @@ fn main() {
         match hw {
             1 => hw::hw1::run("./data/hw/hw1/CP001872.fna", "./data/hw/hw1/CP003913.fna").expect("Homework 1 should pass!"),
             2 => hw::hw2::run("./data/hw/hw1/CP003913.fna").expect("Homework 2 should pass!"),
-            3 => hw::hw3::run("./data/hw/hw3/test1.gbff").expect("Homework 3 should pass!"),
+            3 => hw::hw3::run("./data/hw/hw3/s_pyogenes.gbff").expect("Homework 3 should pass!"),
             _ => panic!("This assignment hasn't been completed!"),
         }
         println!("Homework '{}' completed in '{}' seconds", hw, now.elapsed().as_secs());

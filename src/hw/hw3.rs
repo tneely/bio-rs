@@ -218,11 +218,13 @@ fn count_positions(file_path: &str) -> Result<PositionalDistribution, Error> {
             .filter_map(|f| get_start_location(&f.location))
             .for_each(|l| {
                 let mut p = -BASE_OFFSET;
-                for c in seq.extract_location(&l).unwrap() {
-                    *pos_counts.entry(p).or_default().entry(Base::from_char(c as char)).or_default() += 1;
-                    p += 1;
+                if let Ok(sub_seq) = seq.extract_location(&l) {
+                    for c in sub_seq {
+                        *pos_counts.entry(p).or_default().entry(Base::from_char(c as char)).or_default() += 1;
+                        p += 1;
+                    }
+                    cds_locs.push(l);
                 }
-                cds_locs.push(l);
             });
     }
     Ok(PositionalDistribution::new(
