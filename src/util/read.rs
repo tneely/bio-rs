@@ -7,9 +7,7 @@ pub fn file(file_path: &str) -> String {
 }
 
 pub fn file_size(file_path: &str) -> u64 {
-    return fs::metadata(file_path)
-        .expect(&format!("Unable to read file '{}'", file_path))
-        .len();
+    return fs::metadata(file_path).expect(&format!("Unable to read file '{}'", file_path)).len();
 }
 
 // The output is wrapped in a Result to allow matching on errors
@@ -20,4 +18,8 @@ where
 {
     let file = File::open(file_path)?;
     Ok(io::BufReader::new(file).lines())
+}
+
+pub fn file_name_from_path(file_path: &str) -> &str {
+    return Path::new(file_path).file_name().unwrap().to_str().unwrap();
 }
