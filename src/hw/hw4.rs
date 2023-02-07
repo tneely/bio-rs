@@ -34,13 +34,13 @@ impl Base {
 }
 
 #[derive(Debug)]
-struct WeightedDirectedAsyclicGraph {
+struct WeightedDirectedAcyclicGraph {
     nodes: HashMap<String, Rc<RefCell<Node>>>,
 }
 
-impl WeightedDirectedAsyclicGraph {
+impl WeightedDirectedAcyclicGraph {
     fn new(nodes: HashMap<String, Rc<RefCell<Node>>>) -> Self {
-        return WeightedDirectedAsyclicGraph { nodes };
+        return WeightedDirectedAcyclicGraph { nodes };
     }
 
     fn get_path_scores(&self, min_score: isize, constraints: HashSet<String>) -> HashMap<String, TraceScore> {
@@ -190,7 +190,7 @@ pub fn run(file_path1: &str, file_path2: &str) -> Result<(), Error> {
     Ok(())
 }
 
-fn parse_dag(file_path: &str) -> Result<(WeightedDirectedAsyclicGraph, Option<String>, Option<String>), Error> {
+fn parse_dag(file_path: &str) -> Result<(WeightedDirectedAcyclicGraph, Option<String>, Option<String>), Error> {
     let mut start_node: Option<String> = None;
     let mut end_node: Option<String> = None;
     let mut nodes: HashMap<String, Rc<RefCell<Node>>> = HashMap::new();
@@ -230,7 +230,7 @@ fn parse_dag(file_path: &str) -> Result<(WeightedDirectedAsyclicGraph, Option<St
         }
     }
 
-    Ok((WeightedDirectedAsyclicGraph::new(nodes), start_node, end_node))
+    Ok((WeightedDirectedAcyclicGraph::new(nodes), start_node, end_node))
 }
 
 fn score_base(base: Base) -> f64 {
