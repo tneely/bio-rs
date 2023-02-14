@@ -75,6 +75,7 @@ impl WeightedDirectedAcyclicGraph {
         return scores;
     }
 
+    #[allow(dead_code)]
     fn print_graph(&self) {
         self.nodes.iter().for_each(|(name, _)| println!("V {name}"));
         self.nodes.iter().for_each(|(from, node)| {
