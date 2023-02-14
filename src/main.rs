@@ -38,6 +38,7 @@ fn main() {
             3 => hw::hw3::run("./data/hw/hw3/s_pyogenes.gbff").expect("Homework 3 should pass!"),
             4 => hw::hw4::run("./data/hw/hw4/dag.txt", "data/hw/hw4/s_pyogenes.fa").expect("Homework 4 should pass!"),
             5 => hw::hw5::run("./data/hw/hw5/seq1.fa", "./data/hw/hw5/seq2.fa", "./data/hw/hw5/seq3.fa").expect("Homework 5 should pass!"),
+            6 => hw::hw6::run("./data/hw/hw6/example.input.txt").expect("Homework 6 should pass!"),
             _ => panic!("This assignment hasn't been completed!"),
         }
         println!("Homework '{}' completed in '{}' seconds", hw, now.elapsed().as_secs());
