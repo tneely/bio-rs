@@ -10,7 +10,7 @@ pub fn run(file_path1: &str) -> Result<(), Error> {
     let rh = parse_sequence(file_path1)?;
 
     rh.print_seg_list();
-    println!("\nAnnotations:\nTODO");
+    rh.print_annotations();
     rh.print_non_elevated();
     rh.print_elevated();
 
@@ -46,6 +46,19 @@ impl ReadHistogram {
                 println!("{p_start} {p_end} {s:.2}");
             }
         }
+    }
+
+    fn print_annotations(&self) {
+        println!("\nAnnotations:");
+        self.segs
+            .iter()
+            .sorted_unstable_by(|(_, _, score1), (_, _, score2)| score2.partial_cmp(score1).unwrap())
+            .take(3)
+            .for_each(|(start, end, _)| {
+                println!("\nStart: {start}");
+                println!("End: {end}");
+                println!("Description: TODO");
+            })
     }
 
     fn print_non_elevated(&self) {
