@@ -19,8 +19,8 @@ pub fn run(file_path: &str) -> Result<(), Error> {
     let mut current_ll: f64 = 0.0;
     while (prev_ll - current_ll).abs() > 0.1 {
         println!(
-            "Diff: {}\nLL: {current_ll}\nSP: {start_probs:?}\nTP: {transition_probs:?}\nEP: {emission_probs:?}",
-            prev_ll - current_ll
+            "Iter: {iterations}\nDiff: {}\nLL: {current_ll}\nSP: {start_probs:?}\nTP: {transition_probs:?}\nEP: {emission_probs:?}",
+            current_ll - prev_ll
         );
 
         iterations += 1;
@@ -28,15 +28,14 @@ pub fn run(file_path: &str) -> Result<(), Error> {
 
         // Compute forward and backward probabilities
         let forward = compute_forward_scores(&sequence, &emission_probs, &start_probs, &transition_probs);
-        // current_ll = -forward.iter().fold(0.0, |t, c| t + sum_log_prob(c[0], c[1]));
         let last = forward.last().unwrap();
         current_ll = sum_log_prob(last[0], last[1]);
         let backward = compute_backward_scores(&sequence, &emission_probs, &transition_probs);
 
         // New start probs
-        // for s_i in 0..states {
-        //     start_probs[s_i] = forward[0][s_i] + backward[0][s_i] - current_ll;
-        // }
+        for s_i in 0..states {
+            start_probs[s_i] = forward[0][s_i] + backward[0][s_i] - current_ll;
+        }
 
         // Calculate gamma and xi for 1..T-1
         let mut gamma = Vec::from([0.0, 0.0]);
@@ -166,7 +165,7 @@ fn compute_forward_scores(seq: &str, emission_probs: &[HashMap<char, f64>; 2], s
 
 fn compute_backward_scores(seq: &str, emission_probs: &[HashMap<char, f64>; 2], transition_probs: &[[f64; 2]; 2]) -> Vec<Vec<f64>> {
     let states = emission_probs.len();
-    let mut scores: Vec<Vec<f64>> = vec![Vec::from([1.0, 1.0]); seq.len()];
+    let mut scores: Vec<Vec<f64>> = vec![Vec::from([0.0, 0.0]); seq.len()];
     let pos_iter = (0..seq.len() - 1).rev();
 
     for t in pos_iter {
