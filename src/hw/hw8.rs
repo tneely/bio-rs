@@ -17,7 +17,10 @@ pub fn run(file_path: &str) -> Result<(), Error> {
     let mut prev_ll: f64 = -1.0;
     let mut current_ll: f64 = 0.0;
     while (prev_ll - current_ll).abs() > 0.1 {
-        println!("LL: {current_ll}\nSP: {start_probs:?}\nTP: {transition_probs:?}\nEP: {emission_probs:?}");
+        println!(
+            "Diff: {}\nLL: {current_ll}\nSP: {start_probs:?}\nTP: {transition_probs:?}\nEP: {emission_probs:?}",
+            prev_ll - current_ll
+        );
 
         iterations += 1;
         prev_ll = current_ll;
@@ -25,27 +28,34 @@ pub fn run(file_path: &str) -> Result<(), Error> {
         // Compute forward and backward probabilities
         let forward = compute_scores(sequence.chars().into_iter(), &emission_probs, &start_probs, &transition_probs);
         // current_ll = -forward.iter().fold(0.0, |t, c| t + sum_log_prob(c[0], c[1]));
-        current_ll = -forward.last().unwrap().iter().fold(0.0, |t, c| sum_log_prob(t, *c));
+        let last = forward.last().unwrap();
+        current_ll = sum_log_prob(last[0], last[1]);
         let backward = compute_scores(sequence.chars().rev(), &emission_probs, &start_probs, &transition_probs);
 
         let mut fb = Vec::from([0.0, 0.0]);
         let mut fwb = Vec::from([0.0, 0.0]);
-        for s_i in 0..transition_probs.len() {
-            for t in 0..n {
-                fb[s_i] = sum_log_prob(fb[s_i], forward[t][s_i] + backward[n - t - 1][s_i]);
+        for t in 0..n {
+            for s_i in 0..transition_probs.len() {
+                fb[s_i] = if t == 0 {
+                    forward[t][s_i] + backward[n - t - 1][s_i] - current_ll
+                } else {
+                    sum_log_prob(fb[s_i], forward[t][s_i] + backward[n - t - 1][s_i] - current_ll)
+                };
                 if t < n - 1 {
                     for s_j in 0..transition_probs.len() {
-                        fwb[s_i] = sum_log_prob(fwb[s_i], forward[t][s_i] + backward[n - t - 2][s_j] + transition_probs[s_i][s_j]);
+                        fwb[s_i] = if t == 0 {
+                            forward[t][s_i] + backward[n - t - 2][s_j] + transition_probs[s_i][s_j] - current_ll
+                        } else {
+                            sum_log_prob(fwb[s_i], forward[t][s_i] + backward[n - t - 2][s_j] + transition_probs[s_i][s_j] - current_ll)
+                        };
                     }
                 }
             }
-            fb[s_i] -= current_ll;
-            fwb[s_i] -= current_ll;
         }
 
         // New start probs
-        start_probs[0] = forward[0][0] + backward[n - 1][0] - current_ll;
-        start_probs[1] = forward[0][1] + backward[n - 1][1] - current_ll;
+        start_probs[0] = forward[0][0] + backward[n - 2][0] - current_ll;
+        start_probs[1] = forward[0][1] + backward[n - 2][1] - current_ll;
 
         // Zero emission probs
         for s_i in 0..emission_probs.len() {
@@ -73,16 +83,22 @@ pub fn run(file_path: &str) -> Result<(), Error> {
         // Divide transition probs
         for s_i in 0..transition_probs.len() {
             for s_j in 0..transition_probs.len() {
-                transition_probs[s_i][s_j] -= fwb[s_i];
+                transition_probs[s_i][s_j] -= fwb[s_i] - current_ll;
+                // transition_probs[s_i][s_j] -= current_ll;
             }
         }
 
         // Divide emission probs
         for s_i in 0..emission_probs.len() {
-            *emission_probs[s_i].get_mut(&'A').unwrap() -= fb[s_i];
-            *emission_probs[s_i].get_mut(&'C').unwrap() -= fb[s_i];
-            *emission_probs[s_i].get_mut(&'G').unwrap() -= fb[s_i];
-            *emission_probs[s_i].get_mut(&'T').unwrap() -= fb[s_i];
+            *emission_probs[s_i].get_mut(&'A').unwrap() -= fb[s_i] - current_ll;
+            *emission_probs[s_i].get_mut(&'C').unwrap() -= fb[s_i] - current_ll;
+            *emission_probs[s_i].get_mut(&'G').unwrap() -= fb[s_i] - current_ll;
+            *emission_probs[s_i].get_mut(&'T').unwrap() -= fb[s_i] - current_ll;
+
+            // *emission_probs[s_i].get_mut(&'A').unwrap() -= current_ll;
+            // *emission_probs[s_i].get_mut(&'C').unwrap() -= current_ll;
+            // *emission_probs[s_i].get_mut(&'G').unwrap() -= current_ll;
+            // *emission_probs[s_i].get_mut(&'T').unwrap() -= current_ll;
         }
     }
 
@@ -132,13 +148,16 @@ where
 {
     let mut scores: Vec<Vec<f64>> = Vec::new();
     let first_c = char_iter.next().unwrap();
-    let values: Vec<f64> = (0..emission_probs.len()).map(|i| (start_probs[i] * emission_probs[i][&first_c])).collect();
+    let values: Vec<f64> = (0..emission_probs.len()).map(|i| (start_probs[i] + emission_probs[i][&first_c])).collect();
     scores.push(values);
 
     let mut prev = 0;
     for c in char_iter {
         let values = (0..emission_probs.len())
-            .map(|i| (0..emission_probs.len()).fold(0.0, |t, j| sum_log_prob(t, scores[prev][j] + emission_probs[i][&c] + transition_probs[j][i])))
+            .map(|i| {
+                let first = scores[prev][0] + emission_probs[i][&c] + transition_probs[0][i];
+                sum_log_prob(first, scores[prev][1] + emission_probs[i][&c] + transition_probs[1][i])
+            })
             .collect();
         scores.push(values);
         prev += 1;
