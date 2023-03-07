@@ -18,11 +18,6 @@ pub fn run(file_path: &str) -> Result<(), Error> {
     let mut prev_ll: f64 = -1.0;
     let mut current_ll: f64 = 0.0;
     while (prev_ll - current_ll).abs() > 0.1 {
-        println!(
-            "Iter: {iterations}\nDiff: {}\nLL: {current_ll}\nSP: {start_probs:?}\nTP: {transition_probs:?}\nEP: {emission_probs:?}",
-            current_ll - prev_ll
-        );
-
         iterations += 1;
         prev_ll = current_ll;
 
@@ -105,7 +100,7 @@ pub fn run(file_path: &str) -> Result<(), Error> {
     println!("\nLog Likelihood:\n{:.3}", current_ll);
 
     println!("\nInitial State Probabilities:");
-    (0..states).for_each(|i| println!("{i}={:.3e}", start_probs[i].exp()));
+    (0..states).for_each(|i| println!("{}={:.3e}", i + 1, start_probs[i].exp()));
 
     println!("\nTransition Probabilities:");
     (0..states).for_each(|i| (0..states).for_each(|j| println!("{},{}={:.3e}", i + 1, j + 1, transition_probs[i][j].exp())));
