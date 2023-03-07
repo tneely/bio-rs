@@ -68,14 +68,6 @@ pub fn run(file_path: &str) -> Result<(), Error> {
             gamma[s_i] = sum_log_prob(gamma[s_i], forward[n - 1][s_i] + backward[n - 1][s_i] - current_ll)
         }
 
-        // Zero emission probs
-        for s_i in 0..states {
-            *emission_probs[s_i].get_mut(&'A').unwrap() = 0.0;
-            *emission_probs[s_i].get_mut(&'C').unwrap() = 0.0;
-            *emission_probs[s_i].get_mut(&'G').unwrap() = 0.0;
-            *emission_probs[s_i].get_mut(&'T').unwrap() = 0.0;
-        }
-
         // Calculate emission probs
         for s_i in 0..states {
             for t in 0..n {
