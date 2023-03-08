@@ -41,6 +41,7 @@ fn main() {
             6 => hw::hw6::run("./data/hw/hw6/chm13.chr16.txt").expect("Homework 6 should pass!"),
             7 => hw::hw7::run("./data/hw/hw6/chm13.chr16.txt").expect("Homework 7 should pass!"),
             8 => hw::hw8::run("./data/hw/hw8/Pyrococcus_horikoshii.fasta").expect("Homework 8 should pass!"),
+            9 => hw::hw9::run("./data/hw/hw9/ENm006_short.aln").expect("Homework 9 should pass!"),
             _ => panic!("This assignment hasn't been completed!"),
         }
         println!("Homework '{}' completed in '{}' seconds", hw, now.elapsed().as_secs());
