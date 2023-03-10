@@ -13,43 +13,59 @@ pub fn run(file_path: &str) -> Result<(), Error> {
     let start_probs = [0.95_f64.ln(), 0.05_f64.ln()];
     let transition_probs = [[0.95_f64.ln(), 0.05_f64.ln()], [0.10_f64.ln(), 0.90_f64.ln()]];
 
-    let mut state_segments: [Vec<(usize, usize)>; 2] = [Vec::new(), Vec::new()];
-    let mut lines = read::lines(file_path)?;
-    while let Some(line) = lines.next() {
-        if let Ok(ip) = line {
-            if ip.starts_with("#") {
-                let (start, _) = parse_range(&ip);
-                let aln = parse_sequence(&lines.next().unwrap()?, &lines.next().unwrap()?, &lines.next().unwrap()?);
-                let mut current_state: Option<usize> = None;
-                let (mut seg_start, mut seg_end) = (0, 0);
-                for (i, em) in aln.iter().enumerate() {
-                    // TODO: Compute forward (see hw8), then backtrack to find highest probability path?
-                    if let Some(cs) = current_state {
-                        let p1 = transition_probs[cs][0] + states[0].get_prob(em);
-                        let p2 = transition_probs[cs][1] + states[1].get_prob(em);
-                        let next_state = if p1 > p2 { 0 } else { 1 };
-                        if cs == next_state {
-                            seg_end += 1
-                        } else {
-                            state_segments[cs].push((seg_start, seg_end));
-                            (seg_start, seg_end) = (start + i, start + i);
-                        }
-                    } else {
-                        let p1 = start_probs[0] + states[0].get_prob(em);
-                        let p2 = start_probs[1] + states[1].get_prob(em);
-                        current_state = if p1 > p2 { Some(0) } else { Some(1) };
-                        (seg_start, seg_end) = (start + i, start + i);
-                    }
+    let (aln, start, end) = load_alignment(file_path)?;
+
+    // Compute scores
+    let mut score_tracker = Vec::from([vec![0.0; aln.len()], vec![0.0; aln.len()]]);
+    let mut state_tracker = Vec::from([vec![0; aln.len()], vec![0_usize; aln.len()]]);
+    for (i, em) in aln.iter().enumerate() {
+        if i == 0 {
+            for s in 0..states.len() {
+                score_tracker[s][i] = start_probs[s] + states[s].get_prob(em)
+            }
+        } else {
+            for s in 0..states.len() {
+                let p0 = score_tracker[0][i - 1] + transition_probs[0][s] + states[s].get_prob(em);
+                let p1 = score_tracker[1][i - 1] + transition_probs[1][s] + states[s].get_prob(em);
+                if p0 > p1 {
+                    score_tracker[s][i] = p0;
+                    state_tracker[s][i] = 0;
+                } else {
+                    score_tracker[s][i] = p1;
+                    state_tracker[s][i] = 1;
                 }
             }
         }
     }
 
+    // Backtrack on best path
+    let mut state_segments: [Vec<(isize, isize)>; 2] = [Vec::new(), Vec::new()];
+    let mut current_state: Option<usize> = None;
+    let mut best_path = vec![0; aln.len()];
+    let mut seg_end = 0_isize;
+    for i in (0..aln.len()).rev() {
+        if let Some(cs) = current_state {
+            best_path[i] = cs;
+            let next_state = state_tracker[cs][i];
+            if cs != next_state || i == 0 {
+                let current_pos = start + i as isize;
+                state_segments[cs].push((current_pos, seg_end));
+                seg_end = current_pos - 1;
+            }
+            current_state = Some(next_state)
+        } else {
+            let p0 = score_tracker[0][i];
+            let p1 = score_tracker[1][i];
+            current_state = if p0 > p1 { Some(0) } else { Some(1) };
+            seg_end = end;
+        }
+    }
+
     println!("\nState Histogram:");
-    println!("TODO");
+    (0..states.len()).for_each(|i| println!("{}={:.5}", i + 1, state_segments[i].iter().fold(0, |t, (s, e)| t + e - s)));
 
     println!("\nSegment Histogram:");
-    println!("TODO");
+    (0..states.len()).for_each(|i| println!("{}={:.5}", i + 1, state_segments[i].len()));
 
     println!("\nInitial State Probabilities:");
     (0..states.len()).for_each(|i| println!("{}={:.5}", i + 1, start_probs[i].exp()));
@@ -58,12 +74,11 @@ pub fn run(file_path: &str) -> Result<(), Error> {
     (0..states.len()).for_each(|i| (0..states.len()).for_each(|j| println!("{},{}={:.5}", i + 1, j + 1, transition_probs[i][j].exp())));
 
     println!("\nEmission Probabilities:");
-    // neutral_state.print_probs("1");
-    // conserved_state.print_probs("2");
+    neutral_state.print_probs("1");
+    conserved_state.print_probs("2");
 
     println!("\nLongest Segment List:");
-    println!("{state_segments:?}");
-    let mut top_conserved: Vec<&(usize, usize)> = state_segments[1].iter().sorted_by_key(|(s, e)| s - e).collect();
+    let mut top_conserved: Vec<&(isize, isize)> = state_segments[1].iter().sorted_by_key(|(s, e)| s - e).collect();
     top_conserved.truncate(10);
     top_conserved.iter().for_each(|(s, e)| println!("{s} {e}"));
 
@@ -82,7 +97,7 @@ impl StateProbability {
         let mut emission_probabilities = HashMap::new();
         let total_count = emission_counts.iter().fold(0.0, |prev, (_, next)| prev + *next as f64);
         for (em, c) in emission_counts {
-            emission_probabilities.insert(em, c as f64 / total_count);
+            emission_probabilities.insert(em, (c as f64 / total_count).ln());
         }
         return StateProbability { emission_probabilities };
     }
@@ -93,9 +108,47 @@ impl StateProbability {
 
     fn print_probs(&self, id: &str) {
         for (em, c) in self.emission_probabilities.iter().sorted_by_key(|(em, _)| *em) {
-            println!("{id},{em}={c:.5}")
+            println!("{id},{em}={:.5}", c.exp())
         }
     }
+}
+
+fn load_alignment(file_path: &str) -> Result<(Vec<String>, isize, isize), Error> {
+    let mut lines = read::lines(file_path)?;
+    let mut aln = Vec::new();
+    let mut start: Option<isize> = None;
+    let mut end: Option<isize> = None;
+    while let Some(line) = lines.next() {
+        if let Ok(ip) = line {
+            if ip.starts_with("#") {
+                let (s, e) = parse_range(&ip);
+                if start == None {
+                    start = Some(s);
+                } else {
+                    end = Some(e);
+                }
+
+                // Expected format: hg18\tATAAAA
+                let l1 = lines.next().unwrap()?;
+                let seq1 = l1.split("\t").nth(1).unwrap();
+                let l2 = lines.next().unwrap()?;
+                let seq2 = l2.split("\t").nth(1).unwrap();
+                let l3 = lines.next().unwrap()?;
+                let seq3 = l3.split("\t").nth(1).unwrap();
+
+                for i in 0..seq1.len() {
+                    aln.push(format!(
+                        "{}{}{}",
+                        seq1.as_bytes()[i] as char,
+                        seq2.as_bytes()[i] as char,
+                        seq3.as_bytes()[i] as char
+                    ))
+                }
+            }
+        }
+    }
+
+    return Ok((aln, start.unwrap(), end.unwrap()));
 }
 
 fn load_freqs(file_path: &str) -> Result<StateProbability, Error> {
@@ -116,30 +169,11 @@ fn load_freqs(file_path: &str) -> Result<StateProbability, Error> {
 }
 
 // Expected format: # chrX:152767491-152767698
-fn parse_range(string: &str) -> (usize, usize) {
+fn parse_range(string: &str) -> (isize, isize) {
     let range_str = string.split(":").nth(1).unwrap();
     let mut range_parts = range_str.split("-");
-    let start: usize = range_parts.next().unwrap().parse().unwrap();
-    let end: usize = range_parts.next().unwrap().parse().unwrap();
+    let start: isize = range_parts.next().unwrap().parse().unwrap();
+    let end: isize = range_parts.next().unwrap().parse().unwrap();
 
     return (start, end);
-}
-
-// Expected format: hg18\tATAAAA
-fn parse_sequence(l1: &str, l2: &str, l3: &str) -> Vec<String> {
-    let seq1 = l1.split("\t").nth(1).unwrap();
-    let seq2 = l2.split("\t").nth(1).unwrap();
-    let seq3 = l3.split("\t").nth(1).unwrap();
-
-    let mut aln = Vec::new();
-    for i in 0..seq1.len() {
-        aln.push(format!(
-            "{}{}{}",
-            seq1.as_bytes()[i] as char,
-            seq2.as_bytes()[i] as char,
-            seq3.as_bytes()[i] as char
-        ))
-    }
-
-    return aln;
 }
